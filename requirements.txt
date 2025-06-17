@@ -1,4 +1,7 @@
-flask
-openai-whisper
+git+https://github.com/openai/whisper.git
 torch
+torchaudio
+ffmpeg-python
+flask
 gunicorn
+openai
