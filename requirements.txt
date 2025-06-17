@@ -5,3 +5,4 @@ ffmpeg-python
 flask
 gunicorn
 openai
+python-dotenv
