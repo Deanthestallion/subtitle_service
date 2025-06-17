@@ -3,22 +3,23 @@ import os
 import uuid
 import subprocess
 from dotenv import load_dotenv
-from openai import OpenAI
 
 load_dotenv()
-
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 app = Flask(__name__)
 OUTPUT_DIR = "outputs"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
+# Only load OpenAI when needed
 def transcribe_video(input_path, srt_path):
+    import openai
+    openai.api_key = os.getenv("OPENAI_API_KEY")
+
     audio_path = input_path.replace(".mp4", ".mp3")
     subprocess.run(["ffmpeg", "-i", input_path, audio_path], check=True)
 
     with open(audio_path, "rb") as audio_file:
-        transcript = client.audio.transcriptions.create(
+        transcript = openai.audio.transcriptions.create(
             model="whisper-1",
             file=audio_file,
             response_format="srt"
@@ -49,28 +50,3 @@ def add_subtitles():
     output_path = os.path.join(OUTPUT_DIR, f"subbed_{unique_id}.mp4")
 
     file.save(input_path)
-
-    try:
-        transcribe_video(input_path, srt_path)
-        burn_subtitles(input_path, srt_path, output_path)
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-    return jsonify({
-        "message": "Subtitles added",
-        "download_url": f"/download/{os.path.basename(output_path)}"
-    })
-
-@app.route('/download/<filename>', methods=['GET'])
-def download(filename):
-    path = os.path.join(OUTPUT_DIR, filename)
-    if not os.path.exists(path):
-        return jsonify({"error": "File not found"}), 404
-    return send_file(path, as_attachment=True)
-
-@app.route('/', methods=['GET'])
-def health():
-    return jsonify({"status": "Subtitle service running"}), 200
-
-if __name__ == '__main__':
-    app.run(debug=False, host='0.0.0.0', port=5000)
