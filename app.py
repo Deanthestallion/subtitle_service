@@ -1,12 +1,13 @@
 from flask import Flask, request, jsonify, send_file
 import os
 import uuid
-import openai
-from dotenv import load_dotenv
 import subprocess
+from dotenv import load_dotenv
+import openai
 
+# Load .env and API key
 load_dotenv()
-openai.api_key = os.getenv("OPENAI_API_KEY")
+client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 app = Flask(__name__)
 OUTPUT_DIR = "outputs"
@@ -14,12 +15,19 @@ os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 def transcribe_video(input_path, srt_path):
     audio_path = input_path.replace(".mp4", ".mp3")
+    
+    # Extract audio using ffmpeg
     subprocess.run(["ffmpeg", "-i", input_path, audio_path], check=True)
-
+    
+    # Transcribe with Whisper using openai>=1.0.0 interface
     with open(audio_path, "rb") as audio_file:
-        transcript = openai.Audio.transcribe("whisper-1", audio_file, response_format="srt")
+        transcript = client.audio.transcriptions.create(
+            model="whisper-1",
+            file=audio_file,
+            response_format="srt"
+        )
 
-    with open(srt_path, "w") as f:
+    with open(srt_path, "w", encoding="utf-8") as f:
         f.write(transcript)
 
     os.remove(audio_path)
