@@ -3,11 +3,11 @@ import os
 import uuid
 import subprocess
 from dotenv import load_dotenv
-import openai
+from openai import OpenAI
 
-# Load .env and API key
 load_dotenv()
-client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 app = Flask(__name__)
 OUTPUT_DIR = "outputs"
@@ -15,11 +15,8 @@ os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 def transcribe_video(input_path, srt_path):
     audio_path = input_path.replace(".mp4", ".mp3")
-    
-    # Extract audio using ffmpeg
     subprocess.run(["ffmpeg", "-i", input_path, audio_path], check=True)
-    
-    # Transcribe with Whisper using openai>=1.0.0 interface
+
     with open(audio_path, "rb") as audio_file:
         transcript = client.audio.transcriptions.create(
             model="whisper-1",
@@ -27,7 +24,7 @@ def transcribe_video(input_path, srt_path):
             response_format="srt"
         )
 
-    with open(srt_path, "w", encoding="utf-8") as f:
+    with open(srt_path, "w") as f:
         f.write(transcript)
 
     os.remove(audio_path)
